@@ -126,6 +126,7 @@ static const struct file_operations temp_fops = {
     .release        = temp_release,
     .read           = temp_read,
     .unlocked_ioctl = temp_ioctl,
+    .llseek         = generic_file_llseek,
 };
 
 static int __init tempsensor_init(void)
