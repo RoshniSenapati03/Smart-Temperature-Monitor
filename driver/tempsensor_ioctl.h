@@ -12,4 +12,7 @@
  * Argument is an int, in tenths of a degree (e.g. 5 = up to 0.5C per read). */
 #define TEMP_IOC_SET_DRIFT _IOW(TEMP_IOC_MAGIC, 2, int)
 
+#define TEMP_IOC_GET_BATTERY _IOR(TEMP_IOC_MAGIC, 3, int)
+#define TEMP_IOC_SET_BATTERY _IOW(TEMP_IOC_MAGIC, 4, int)
+
 #endif

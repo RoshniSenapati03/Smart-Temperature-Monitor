@@ -7,7 +7,7 @@
 //   sudo ./temp_monitor --reset         send TEMP_IOC_RESET, then exit
 //   sudo ./temp_monitor --drift N       send TEMP_IOC_SET_DRIFT with value N
 //                                       (tenths of a degree), then run the loop
-//
+// 
 // Capstone teaching app - not for production use.
 
 #include <cstdio>
@@ -25,7 +25,7 @@
 
 static const char *DEV_PATH = "/dev/tempsensor";
 
-enum class State { NORMAL, WARNING, CRITICAL };
+enum class State { NORMAL, WARNING, CRITICAL, LOW_BATTERY };
 
 static const char *state_name(State s)
 {
@@ -33,6 +33,7 @@ static const char *state_name(State s)
         case State::NORMAL:   return "NORMAL";
         case State::WARNING:  return "WARNING";
         case State::CRITICAL: return "CRITICAL";
+        case State::LOW_BATTERY: return "LOW_BATTERY";
     }
     return "UNKNOWN";
 }
@@ -74,6 +75,26 @@ static double read_temperature()
     buf[n] = '\0';
     return std::atof(buf);
 }
+
+// FOR LOW BATTERY
+static int read_battery()
+{
+    int fd = open(DEV_PATH, O_RDONLY);
+    if (fd < 0) {
+        perror("open");
+        return -1.;
+    }
+    int battery = -1;
+    if (ioctl(fd, TEMP_IOC_GET_BATTERY, &battery) < 0){
+        perror("ioctl GET_BATTERY");
+        close(fd);
+        return -1;
+    }
+    close(fd);
+    return battery;
+}
+
+
 
 int main(int argc, char *argv[])
 {
@@ -134,7 +155,11 @@ int main(int argc, char *argv[])
             fprintf(stderr, "[%s] Failed to read sensor, retrying...\n",
                     timestamp().c_str());
         } else {
-            State new_state = classify(temp);
+
+            int battery = read_battery();
+            State new_state = (battery >= 0 && battery <= 15)
+                                   ? State::LOW_BATTERY
+                                   : classify(temp);
 
             if (new_state != current_state) {
                 printf("[%s] TRANSITION: %s -> %s  (temp = %.1f C)\n",

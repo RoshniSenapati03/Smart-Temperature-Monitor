@@ -40,6 +40,8 @@ static DEFINE_MUTEX(temp_lock);
 static int current_temp_tenths = 250;   /* 25.0 C baseline */
 static int drift_tenths = 10;           /* default: up to 1.0 C swing per read */
 
+static int battery_charge = 10;
+
 static int temp_open(struct inode *inode, struct file *file)
 {
     pr_info("tempsensor: device opened\n");
@@ -78,6 +80,12 @@ static ssize_t temp_read(struct file *file, char __user *buf,
 
     len = scnprintf(out, sizeof(out), "%d.%d\n",
                      current_temp_tenths / 10, current_temp_tenths % 10);
+   
+
+     if (battery_charge > 0)
+        battery_charge -= 1;
+
+
 
     mutex_unlock(&temp_lock);
 
@@ -112,6 +120,16 @@ static long temp_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         mutex_unlock(&temp_lock);
         pr_info("tempsensor: drift set to %d.%d C per read\n",
                 new_drift / 10, new_drift % 10);
+        break;
+
+
+    case TEMP_IOC_GET_BATTERY:
+        if (copy_to_user((int __user *)arg, &battery_charge, sizeof(int)))
+            return -EFAULT;
+        break;
+    case TEMP_IOC_SET_BATTERY:
+        if (copy_from_user(&battery_charge, (int __user *)arg, sizeof(int)))
+            return -EFAULT;
         break;
 
     default:
